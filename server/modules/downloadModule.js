@@ -52,7 +52,7 @@ class DownloadModule {
       }, 1000000); // Set your desired timeout
 
       console.log(`Running exec for ${jobType}`);
-      const proc = spawn(command, { timeout: 1000000, shell: true });
+      const proc = spawn(command, { timeout: 1000000 });
 
       proc.stdout.on('data', (data) => {
         console.log(data.toString()); // log the data in real-time
@@ -159,8 +159,11 @@ class DownloadModule {
     );
 
     if (jobModule.getJob(jobId).status === 'In Progress') {
-      const baseCommand = this.getBaseCommand();
-      const command = `${baseCommand} -a ./config/channels.list --playlist-end ${configModule.config.channelFilesToDownload}`;
+      const command = this.getBaseCommand();
+      command.push([
+        '-a', './config/channels.list',
+        '--playlist-end', configModule.config.channelFilesToDownload
+      ]);
       this.doDownload(command, jobId, jobType);
     }
   }
@@ -190,7 +193,7 @@ class DownloadModule {
     );
 
     if (jobModule.getJob(jobId).status === 'In Progress') {
-      const baseCommand = this.getBaseCommand();
+      const command = this.getBaseCommand();
 
       const modifiedUrls = urls.map((url) => {
         if (url.startsWith('-')) {
@@ -200,9 +203,7 @@ class DownloadModule {
         }
       });
 
-      const urlsString = modifiedUrls.join(' '); // Join all URLs into a single space-separated string
-
-      const command = `${baseCommand} ${urlsString}`;
+      command.push(modifiedUrls);
       this.doDownload(command, jobId, jobType);
     }
   }
@@ -210,21 +211,23 @@ class DownloadModule {
   // Download 1080p mp4 because it contains embedded metadata
   // We write the info.json file to the same directory because Youtarr parses those for video information display
   getBaseCommand() {
-    return (
-      'yt-dlp -4 --ffmpeg-location ' +
-      configModule.ffmpegPath +
-      ' -f "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --write-thumbnail --convert-thumbnails jpg ' +
-      '--download-archive ./config/complete.list --ignore-errors --embed-metadata --write-info-json ' +
-      '-o "' +
-      configModule.directoryPath +
-      '/%(uploader)s/%(uploader)s - %(title)s - %(id)s/%(uploader)s - %(title)s  [%(id)s].%(ext)s" ' +
-      '--ignore-errors --datebefore now -o "thumbnail:' +
-      configModule.directoryPath +
-      '/%(uploader)s/%(uploader)s - %(title)s - %(id)s/poster" -o "pl_thumbnail:" ' +
-      '--exec "node ' +
-      path.resolve(__dirname, './videoDownloadPostProcessFiles.js') +
-      ' {}" '
-    );
+    return [
+      'yt-dlp',
+      '--ffmpeg-location', configModule.ffmpegPath,
+      '-f', configModule.getConfig().ytDlFormat,
+      '--write-thumbnail',
+      '--convert-thumbnails', 'jpg',
+      '--download-archive', './config/complete.list',
+      '--ignore-errors',
+      '--embed-metadata',
+      '--write-info-json',
+      '-o', `${configModule.directoryPath}/%(uploader)s/%(uploader)s - %(title)s - %(id)s/%(uploader)s - %(title)s  [%(id)s].%(ext)s`,
+      '--ignore-errors',
+      '--datebefore', 'now',
+      '-o', `thumbnail:${configModule.directoryPath}/%(uploader)s/%(uploader)s - %(title)s - %(id)s/poster`,
+      '-o', 'pl_thumbnail:',
+      '--exec', `node ${path.resolve(__dirname, './videoDownloadPostProcessFiles.js')} {}`
+    ];
   }
 }
 

@@ -5,11 +5,13 @@ const path = require('path');
 const db = require('./db');
 const https = require('https');
 const http = require('http');
+const files = require('../utils/fileUtils');
 
 const initialize = async () => {
   try {
     // Wait for the database to initialize
     await db.initializeDatabase();
+    await files.initializeConfigFiles();
 
     const configModule = require('./modules/configModule');
     const channelModule = require('./modules/channelModule');
@@ -217,7 +219,7 @@ const initialize = async () => {
         const result = await plexModule.getAuthUrl();
         res.json(result);
       } catch (error) {
-        console.log('PIN ERROR!!' + error.message);
+        console.log('Plex auth-url ERROR! ' + error.message);
         res.status(500).json({ error: error.message });
       }
     });
@@ -250,5 +252,7 @@ const initialize = async () => {
     process.exit(1);
   }
 };
+
+
 
 initialize();

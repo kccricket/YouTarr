@@ -2,6 +2,8 @@ const axios = require('axios');
 const configModule = require('./configModule');
 
 class PlexModule {
+  plexBaseUrl = `http://${configModule.getConfig().plexIP}:${configModule.getConfig().plexPort}`;
+
   constructor() {}
 
   refreshLibrary() {
@@ -9,7 +11,7 @@ class PlexModule {
     // Example GET http://[plexIP]:32400/library/sections/[plexYoutubeLibraryId]/refresh?X-Plex-Token=[plexApiKey]
     try {
       const response = axios.get(
-        `http://${configModule.getConfig().plexIP}:32400/library/sections/${
+        `${this.plexBaseUrl}/library/sections/${
           configModule.getConfig().plexYoutubeLibraryId
         }/refresh?X-Plex-Token=${configModule.getConfig().plexApiKey}`
       );
@@ -22,9 +24,7 @@ class PlexModule {
   async getLibraries() {
     try {
       const response = await axios.get(
-        `http://${
-          configModule.getConfig().plexIP
-        }:32400/library/sections?X-Plex-Token=${
+        `${this.plexBaseUrl}/library/sections?X-Plex-Token=${
           configModule.getConfig().plexApiKey
         }`
       );
@@ -66,7 +66,7 @@ class PlexModule {
       }&code=${code}&context%5Bdevice%5D%5Bproduct%5D=Youtarr`;
       return { authUrl, pinId: id };
     } catch (error) {
-      console.log('PIN ERROR!!' + error.message);
+      console.log('getAuthUrl ERROR! ' + error.message);
       throw error;
     }
   }
@@ -90,7 +90,7 @@ class PlexModule {
       });
       authToken = response.data.authToken;
     } catch (error) {
-      console.log('PIN ERROR!!' + error.message);
+      console.log('checkPin ERROR! ' + error.message);
       console.log(error.response.data);
     }
 
@@ -107,7 +107,7 @@ class PlexModule {
       // Verify authToken against your Plex server
       try {
         await axios.get(
-          `http://${configModule.getConfig().plexIP}:32400/identity`,
+          `${this.plexBaseUrl}/identity`,
           {
             headers: {
               'X-Plex-Token': authToken,

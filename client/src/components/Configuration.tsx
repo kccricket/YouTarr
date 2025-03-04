@@ -36,6 +36,7 @@ function Configuration({ token }: ConfigurationProps) {
     youtubeOutputDirectory: '',
     plexYoutubeLibraryId: '',
     plexIP: '',
+    plexPort: 32400,
     uuid: '',
     youtubeApiKey: '',
   });

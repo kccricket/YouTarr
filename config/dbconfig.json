@@ -1,26 +1,14 @@
 {
   "development": {
-    "username": "root",
-    "password": "123qweasd",
-    "database": "youtarr",
-    "host": "127.0.0.1",
-    "dialect": "mysql",
-    "port": 3321
+    "dialect": "sqlite",
+    "storage": "/var/db/youtarr/db.sqlite"
   },
   "test": {
-    "username": "root",
-    "password": "123qweasd",
-    "database": "youtarr",
-    "host": "127.0.0.1",
-    "dialect": "mysql",
-    "port": 3321
+    "dialect": "sqlite",
+    "storage": "/var/db/youtarr/db.sqlite"
   },
   "production": {
-    "username": "root",
-    "password": "123qweasd",
-    "database": "youtarr",
-    "host": "127.0.0.1",
-    "dialect": "mysql",
-    "port": 3321
+    "dialect": "sqlite",
+    "storage": "/var/db/youtarr/db.sqlite"
   }
 }

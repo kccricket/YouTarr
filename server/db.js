@@ -1,10 +1,8 @@
 const { Sequelize } = require('sequelize');
 
-const sequelize = new Sequelize('youtarr', 'root', '123qweasd', {
-  host: 'localhost',
-  dialect: 'mysql',
-  port: 3321,
-  logging: false,
+const sequelize = new Sequelize({
+  dialect: 'sqlite',
+  storage: '/var/db/youtarr/db.sqlite',
 });
 
 const initializeDatabase = async () => {
