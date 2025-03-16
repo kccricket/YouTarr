@@ -5,7 +5,7 @@ const path = require('path');
 const db = require('./db');
 const https = require('https');
 const http = require('http');
-const files = require('../utils/fileUtils');
+const files = require('./fileUtils.js');
 
 const initialize = async () => {
   try {
