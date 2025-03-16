@@ -9,7 +9,7 @@
     "client": "cd client && npm start",
     "start:db": "bash ./scripts/start-dev-dbonly.sh",
     "dev": "concurrently --kill-others \"npm run start:dev\" \"npm run client\"",
-    "lint": "eslint ./client/src/. --ext .ts,.tsx && eslint ./server/. --ext .js",
+    "lint": "npx eslint ./client/src/. --ext .ts,.tsx && npx eslint ./server/. --ext .js",
     "lint-staged": "lint-staged",
     "prepare": "husky install"
   },

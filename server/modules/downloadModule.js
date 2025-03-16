@@ -52,7 +52,7 @@ class DownloadModule {
       }, 1000000); // Set your desired timeout
 
       console.log(`Running exec for ${jobType}`);
-      const proc = spawn(command, { timeout: 1000000 });
+      const proc = spawn('yt-dlp', command, { timeout: 1000000 });
 
       proc.stdout.on('data', (data) => {
         console.log(data.toString()); // log the data in real-time
@@ -211,8 +211,10 @@ class DownloadModule {
   // Download 1080p mp4 because it contains embedded metadata
   // We write the info.json file to the same directory because Youtarr parses those for video information display
   getBaseCommand() {
+    const proxy = configModule.getConfig().ytDlProxy;
+    
     return [
-      'yt-dlp',
+      ... (proxy ? ['--proxy', proxy] : []),
       '--ffmpeg-location', configModule.ffmpegPath,
       '-f', configModule.getConfig().ytDlFormat,
       '--write-thumbnail',
