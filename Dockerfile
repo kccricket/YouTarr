@@ -20,6 +20,7 @@ RUN npm ci && \
     chmod +x /usr/local/bin/yt-dlp
 
 COPY server/ ./server/
+COPY migrations ./migrations/
 
 # Copy client build from builder stage
 COPY --from=client-builder /app/client/build/ ./client/build/
