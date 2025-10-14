@@ -13,6 +13,7 @@ services:
       AUTH_ENABLED: ${AUTH_ENABLED:-}
       AUTH_PRESET_USERNAME: ${AUTH_PRESET_USERNAME:-}
       AUTH_PRESET_PASSWORD: ${AUTH_PRESET_PASSWORD:-}
+      START_MARIADB: "false"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
