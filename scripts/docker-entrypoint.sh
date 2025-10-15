@@ -53,8 +53,7 @@ if [ ! -f "/app/config/config.json" ]; then
   exit 1
 fi
 
-YOUTUBE_OUTPUT_DIR=$(grep '"youtubeOutputDirectory"' /app/config/config.json | sed 's/.*"youtubeOutputDirectory"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
-YOUTUBE_OUTPUT_DIR=$(echo "$YOUTUBE_OUTPUT_DIR" | xargs)
+YOUTUBE_OUTPUT_DIR=$(jq -r '.youtubeOutputDirectory' /app/config/config.json)
 
 if [ -z "$YOUTUBE_OUTPUT_DIR" ] || [ "$YOUTUBE_OUTPUT_DIR" == "null" ]; then
   echo "==============================================="
@@ -70,6 +69,7 @@ if [ ! -d "$YOUTUBE_OUTPUT_DIR" ]; then
   echo "==============================================="
   exit 1
 fi
+
 if [ ! -r "$YOUTUBE_OUTPUT_DIR" ]; then
   echo "==============================================="
   echo "ERROR: YouTube output directory is not readable!"
