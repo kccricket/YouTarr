@@ -14,6 +14,9 @@ class ConfigModule extends EventEmitter {
 
     this.config = JSON.parse(fs.readFileSync(this.configPath));
 
+    // Apply environment variable overrides BEFORE any other processing
+    this.applyEnvironmentOverrides();
+
     if (this.isPlatformDeployment()) {
       this.ensurePlatformDirectories();
     }
@@ -216,6 +219,92 @@ class ConfigModule extends EventEmitter {
     this.config = this.migrateConfig(this.config);
 
     this.watchConfig();
+  }
+
+  applyEnvironmentOverrides() {
+    // Apply environment variable overrides to config
+    // These take precedence over config file values
+    let configModified = false;
+
+    // Helper function to apply an environment variable override
+    const applyOverride = (envVar, configKey, type = 'string') => {
+      if (process.env[envVar] !== undefined && process.env[envVar] !== '') {
+        const value = process.env[envVar];
+        
+        // Convert value based on type
+        let convertedValue;
+        switch (type) {
+        case 'boolean':
+          convertedValue = value.toLowerCase() === 'true';
+          break;
+        case 'number':
+          convertedValue = parseInt(value, 10);
+          if (isNaN(convertedValue)) {
+            logger.warn(`Invalid number value for ${envVar}: ${value}, skipping override`);
+            return false;
+          }
+          break;
+        case 'string':
+        default:
+          convertedValue = value;
+          break;
+        }
+
+        // Only update if value is different
+        if (this.config[configKey] !== convertedValue) {
+          logger.info(`Applying environment override: ${envVar} -> ${configKey}`);
+          this.config[configKey] = convertedValue;
+          configModified = true;
+        }
+        return true;
+      }
+      return false;
+    };
+
+    // Core settings
+    applyOverride('YOUTUBE_OUTPUT_DIR', 'youtubeOutputDirectory', 'string');
+    
+    // Plex integration settings
+    applyOverride('PLEX_IP', 'plexIP', 'string');
+    applyOverride('PLEX_PORT', 'plexPort', 'string');
+    applyOverride('PLEX_API_KEY', 'plexApiKey', 'string');
+    applyOverride('PLEX_LIBRARY_ID', 'plexYoutubeLibraryId', 'string');
+    
+    // Channel settings
+    applyOverride('CHANNEL_AUTO_DOWNLOAD', 'channelAutoDownload', 'boolean');
+    applyOverride('CHANNEL_FILES_TO_DOWNLOAD', 'channelFilesToDownload', 'number');
+    applyOverride('CHANNEL_DOWNLOAD_FREQUENCY', 'channelDownloadFrequency', 'string');
+    
+    // Video quality settings
+    applyOverride('PREFERRED_RESOLUTION', 'preferredResolution', 'string');
+    applyOverride('VIDEO_CODEC', 'videoCodec', 'string');
+    
+    // Notification settings
+    applyOverride('NOTIFICATIONS_ENABLED', 'notificationsEnabled', 'boolean');
+    applyOverride('NOTIFICATION_SERVICE', 'notificationService', 'string');
+    applyOverride('DISCORD_WEBHOOK_URL', 'discordWebhookUrl', 'string');
+    
+    // Download performance settings
+    applyOverride('DOWNLOAD_SOCKET_TIMEOUT', 'downloadSocketTimeoutSeconds', 'number');
+    applyOverride('DOWNLOAD_THROTTLED_RATE', 'downloadThrottledRate', 'string');
+    applyOverride('DOWNLOAD_RETRY_COUNT', 'downloadRetryCount', 'number');
+    applyOverride('ENABLE_STALL_DETECTION', 'enableStallDetection', 'boolean');
+    applyOverride('STALL_DETECTION_WINDOW', 'stallDetectionWindowSeconds', 'number');
+    applyOverride('STALL_DETECTION_THRESHOLD', 'stallDetectionRateThreshold', 'string');
+    
+    // Media server features
+    applyOverride('WRITE_CHANNEL_POSTERS', 'writeChannelPosters', 'boolean');
+    applyOverride('WRITE_VIDEO_NFO_FILES', 'writeVideoNfoFiles', 'boolean');
+    
+    // Temporary download settings
+    applyOverride('USE_TMP_FOR_DOWNLOADS', 'useTmpForDownloads', 'boolean');
+    applyOverride('TMP_FILE_PATH', 'tmpFilePath', 'string');
+
+    // Save config if any environment overrides were applied
+    if (configModified) {
+      logger.info('Saving config with environment variable overrides');
+      fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
+    }
   }
 
   ensureConfigExists() {

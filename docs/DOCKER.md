@@ -30,50 +30,71 @@ Youtarr uses Docker Compose with two containers:
 
 ### Automatic Config Creation (NEW)
 
-Starting with version 1.23.0, Youtarr now **automatically creates** a `config/config.json` file on first boot if one doesn't exist. This improves the Docker experience for users who manually configure their containers.
+Youtarr now **automatically creates** a `config/config.json` file on first boot if one doesn't exist. **No setup script is required** - just run `docker compose up -d` to get started.
 
-#### Two Setup Methods
+#### Three Setup Methods
 
-1. **Using setup.sh + start.sh (Recommended)**
+1. **Quick Start with Defaults** (NEW - Easiest)
+   - Just run `docker compose up -d` - no setup required!
+   - Downloads saved to `./youtube-downloads` directory by default
+   - Container auto-creates `config.json` from example template
+   - Access at `http://localhost:3087` and configure through the UI
+
+2. **Environment Variable Configuration** (NEW - Recommended for automation)
+   - Set configuration via environment variables before starting:
+     ```bash
+     export YOUTUBE_OUTPUT_DIR=/path/to/your/downloads
+     export PLEX_IP=192.168.1.100
+     export PLEX_API_KEY=your_api_key
+     docker compose up -d
+     ```
+   - Container auto-creates and updates `config.json` with your values
+   - Environment variables override config file values on each start
+   - See "Environment Variable Reference" below for all available options
+
+3. **Interactive Setup Script** (Legacy - Still supported)
    - Run `./setup.sh` to configure your YouTube video directory
    - Script creates `config.json` with your chosen host path
    - Use `./start.sh` to start containers (reads path from config and sets volume mount)
-   - If no admin credentials exist, `./start.sh` prompts for an initial username/password and exports them as `AUTH_PRESET_USERNAME` / `AUTH_PRESET_PASSWORD` for the upcoming container boot
+   - If no admin credentials exist, `./start.sh` prompts for an initial username/password
    - Use `./stop.sh` to stop containers
    - **UI Behavior**: YouTube Output Directory field is **editable** - changes require restart via `./start.sh`
-
-2. **Manual Docker Configuration (docker-compose directly)**
-   - Skip setup.sh entirely
-   - **IMPORTANT**: You **must** edit `docker-compose.yml` first to hardcode your volume mount:
-     ```yaml
-     volumes:
-       - /your/host/path:/usr/src/app/data  # Replace ${YOUTUBE_OUTPUT_DIR} with your path
-     ```
-   - Running `docker compose up` without this edit will fail with: `invalid spec: :/usr/src/app/data: empty section between colons`
-   - After editing the compose file, start containers with `docker compose up -d`
-   - Container auto-creates `config.json` with `/usr/src/app/data` (container's internal path)
-   - **UI Behavior**: YouTube Output Directory field is **read-only** - shows "Docker Volume" chip
 
 #### How Volume Mounts Work
 
 The actual storage location depends on your setup method:
 
-| Setup Method | Volume Mount Source | Config Value | UI Behavior |
-|--------------|-------------------|--------------|-------------|
-| setup.sh + start.sh | `${YOUTUBE_OUTPUT_DIR}` from config.json | Your host path (e.g., `/mnt/videos`) | Editable |
-| Manual docker-compose | Hardcoded in docker-compose.yml | `/usr/src/app/data` (container path) | Read-only |
+| Setup Method | Volume Mount Source | Config Value | Notes |
+|--------------|-------------------|--------------|-------|
+| Default (no config) | `./youtube-downloads` | `/usr/src/app/data` | Auto-created on first start |
+| Environment variable | `$YOUTUBE_OUTPUT_DIR` | Value of env var | Set before `docker compose up` |
+| setup.sh + start.sh | `${YOUTUBE_OUTPUT_DIR}` from config.json | Your host path (e.g., `/mnt/videos`) | Legacy method, still supported |
 
-#### What You'll See in the UI
+#### Quick Start Examples
 
-**If you used setup.sh:**
-- YouTube Output Directory field is editable
-- Shows your actual host path
-- Can be changed (requires restart with `./start.sh`)
+**Example 1: Use default directory (simplest)**
+```bash
+docker compose up -d
+# Downloads saved to ./youtube-downloads
+```
 
-**If you manually configured docker-compose.yml:**
-- YouTube Output Directory field shows "Docker Volume" chip
-- Field is disabled (read-only) showing `/usr/src/app/data`
-- Helper text: "This path is configured by your Docker volume mount. To change where videos are saved, update the volume mount in your docker-compose.yml file."
+**Example 2: Use custom directory via environment variable**
+```bash
+export YOUTUBE_OUTPUT_DIR=/mnt/nas/youtube
+docker compose up -d
+# Downloads saved to /mnt/nas/youtube
+```
+
+**Example 3: Use .env file**
+Create a `.env` file:
+```
+YOUTUBE_OUTPUT_DIR=/mnt/nas/youtube
+PLEX_IP=192.168.1.100
+```
+Then run:
+```bash
+docker compose up -d
+```
 
 ### Setup Script for Network Storage
 
@@ -180,7 +201,9 @@ docker exec -it youtarr-db mysql -u root -p123qweasd youtarr
 
 ## Environment Variables
 
-Set in docker-compose.yml:
+### Core Database Variables
+
+Set in docker-compose.yml (usually don't need to change):
 
 ```yaml
 environment:
@@ -190,9 +213,59 @@ environment:
   - DB_USER=root
   - DB_PASSWORD=123qweasd
   - DB_NAME=youtarr
-  - YOUTUBE_OUTPUT_DIR=${YOUTUBE_OUTPUT_DIR}
-  # Optional: Custom data path (for Elfhosted or similar platforms)
-  # - DATA_PATH=/storage/rclone/storagebox/youtube
+```
+
+### Configuration Override Variables
+
+Starting with the latest version, you can override config.json values using environment variables. These are applied at container startup and automatically update the config file:
+
+| Variable | Config Key | Description | Example |
+|----------|-----------|-------------|---------|
+| `YOUTUBE_OUTPUT_DIR` | `youtubeOutputDirectory` | Path where videos are saved | `/path/to/downloads` |
+| `PLEX_IP` | `plexIP` | Plex server IP address | `192.168.1.100` |
+| `PLEX_PORT` | `plexPort` | Plex server port | `32400` |
+| `PLEX_API_KEY` | `plexApiKey` | Plex API key for library refresh | `ABC123...` |
+| `PLEX_LIBRARY_ID` | `plexYoutubeLibraryId` | Plex library ID for YouTube content | `5` |
+| `CHANNEL_AUTO_DOWNLOAD` | `channelAutoDownload` | Enable automatic channel downloads | `true` |
+| `CHANNEL_FILES_TO_DOWNLOAD` | `channelFilesToDownload` | Number of videos to download per channel | `5` |
+| `PREFERRED_RESOLUTION` | `preferredResolution` | Video quality (144-8k) | `1080` |
+| `VIDEO_CODEC` | `videoCodec` | Preferred codec (default/h264/vp9) | `h264` |
+| `NOTIFICATIONS_ENABLED` | `notificationsEnabled` | Enable notifications | `true` |
+| `NOTIFICATION_SERVICE` | `notificationService` | Notification service to use | `discord` |
+| `DISCORD_WEBHOOK_URL` | `discordWebhookUrl` | Discord webhook for notifications | `https://discord.com/...` |
+| `DOWNLOAD_SOCKET_TIMEOUT` | `downloadSocketTimeoutSeconds` | Download socket timeout (seconds) | `30` |
+| `DOWNLOAD_THROTTLED_RATE` | `downloadThrottledRate` | Download rate limit | `100K` |
+| `DOWNLOAD_RETRY_COUNT` | `downloadRetryCount` | Number of download retries | `2` |
+| `ENABLE_STALL_DETECTION` | `enableStallDetection` | Enable download stall detection | `true` |
+| `STALL_DETECTION_WINDOW` | `stallDetectionWindowSeconds` | Stall detection window (seconds) | `30` |
+| `STALL_DETECTION_THRESHOLD` | `stallDetectionRateThreshold` | Minimum rate before stall | `100K` |
+| `WRITE_CHANNEL_POSTERS` | `writeChannelPosters` | Generate channel poster images | `true` |
+| `WRITE_VIDEO_NFO_FILES` | `writeVideoNfoFiles` | Generate NFO metadata files | `true` |
+| `USE_TMP_FOR_DOWNLOADS` | `useTmpForDownloads` | Use temporary download location | `false` |
+| `TMP_FILE_PATH` | `tmpFilePath` | Temporary download directory | `/tmp/youtarr-downloads` |
+
+**Example usage:**
+
+```bash
+# Set environment variables
+export YOUTUBE_OUTPUT_DIR=/mnt/nas/youtube
+export PLEX_IP=192.168.1.100
+export PLEX_API_KEY=your_plex_token
+export PLEX_LIBRARY_ID=5
+export PREFERRED_RESOLUTION=1080
+
+# Start with your configuration
+docker compose up -d
+```
+
+Or create a `.env` file in the same directory as `docker-compose.yml`:
+
+```env
+YOUTUBE_OUTPUT_DIR=/mnt/nas/youtube
+PLEX_IP=192.168.1.100
+PLEX_API_KEY=your_plex_token
+PLEX_LIBRARY_ID=5
+PREFERRED_RESOLUTION=1080
 ```
 
 ### Platform Deployment Configuration

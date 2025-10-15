@@ -68,19 +68,34 @@ https://github.com/user-attachments/assets/cc153624-c905-42c2-8ee9-9c213816be3a
    cd Youtarr
    ```
 
-2. **Run setup**:
+2. **Start Youtarr** (setup is optional):
    ```bash
+   # Quick start with defaults (downloads to ./youtube-downloads)
+   docker compose up -d
+   
+   # OR use interactive setup script (legacy method)
    ./setup.sh  # Select your YouTube download directory
-   ```
-
-3. **Start Youtarr**:
-   ```bash
    ./start.sh
    ```
+   
+   **Environment variable configuration** (alternative to setup.sh):
+   ```bash
+   # Set your download directory
+   export YOUTUBE_OUTPUT_DIR=/path/to/your/downloads
+   
+   # Optional: Configure Plex integration
+   export PLEX_IP=192.168.1.100
+   export PLEX_PORT=32400
+   export PLEX_API_KEY=your_api_key
+   
+   # Start with your configuration
+   docker compose up -d
+   ```
+   
    - Optional: run `./start.sh --no-auth` only when Youtarr sits behind your own authentication layer (Cloudflare Tunnel, OAuth proxy, VPN, etc.)
    - ⚠️ Never expose Youtarr directly to the internet when using `--no-auth`; always require upstream authentication
 
-4. **Access the web interface**:
+3. **Access the web interface**:
    - Navigate to `http://localhost:3087`
    - Create your admin account on first access
    - If you want automatic Plex integration with library refresh, then configure your Plex connection
