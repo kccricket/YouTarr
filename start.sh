@@ -36,6 +36,7 @@ while [[ $# -gt 0 ]]; do
     --external-db)
       USE_EXTERNAL_DB=true
       COMPOSE_FILE_ARGS=("-f" "docker-compose.external-db.yml")
+      START_MARIADB="false"
       shift
       ;;
     *)
@@ -45,6 +46,10 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [ -z "$START_MARIADB" ]; then
+  START_MARIADB="true"
+fi
 
 if [ "$USE_EXTERNAL_DB" = true ] && [ ! -f "$DB_ENV_FILE" ]; then
   echo ""
@@ -175,6 +180,7 @@ echo "YouTube output directory verified: $CHECK_DIR"
 # Export the YouTube output directory for docker-compose
 export YOUTUBE_OUTPUT_DIR="$youtubeOutputDirectory"
 export LOG_LEVEL
+export START_MARIADB
 
 # Determine if authentication is already configured in config.json
 passwordHash=$(grep -o '"passwordHash"[[:space:]]*:[[:space:]]*"[^"]*"' config/config.json 2>/dev/null | \

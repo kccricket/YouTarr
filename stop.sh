@@ -26,10 +26,7 @@ COMPOSE_CMD=$(get_compose_command)
 
 if [ -n "$COMPOSE_CMD" ]; then
     # Docker Compose is available
-    # Set a dummy value for YOUTUBE_OUTPUT_DIR since it's not needed for stopping
-    export YOUTUBE_OUTPUT_DIR="/tmp"
-
-    # Check if docker-compose containers are running
+    # No need to set YOUTUBE_OUTPUT_DIR for stopping containers
     if $COMPOSE_CMD ps --services 2>/dev/null | grep -q 'youtarr'; then
         echo "Stopping Youtarr docker-compose containers..."
         $COMPOSE_CMD down

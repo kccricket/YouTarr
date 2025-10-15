@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     curl \
     unzip \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Download the latest yt-dlp release directly from GitHub
@@ -44,8 +45,9 @@ COPY --from=build /app/server ./server
 COPY --from=build /app/client/build ./client/build
 COPY --from=build /app/migrations ./migrations
 
-# Copy the new simplified entrypoint script
-COPY scripts/docker-entrypoint-simple.sh /usr/local/bin/docker-entrypoint.sh
+
+# Copy the unified entrypoint script
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Expose port for the application

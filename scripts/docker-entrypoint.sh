@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Trap signals for graceful shutdown
 # SIGTERM is sent by Docker stop, SIGINT by Ctrl+C
 trap 'handle_shutdown' SIGTERM SIGINT
@@ -15,8 +17,8 @@ handle_shutdown() {
         wait "$NODE_PID" 2>/dev/null
     fi
     
-    # Gracefully shutdown MariaDB
-    if [ ! -z "$MYSQL_PID" ]; then
+    # Stop MariaDB if it was started by this script
+    if [ "$START_MARIADB" = "true" ] && [ ! -z "$MYSQL_PID" ]; then
         echo "Stopping MariaDB gracefully (PID: $MYSQL_PID)..."
         /opt/mariadb/bin/mysqladmin --socket=/run/mysqld/mysqld.sock -uroot -p123qweasd shutdown
         
@@ -40,15 +42,96 @@ handle_shutdown() {
     exit 0
 }
 
-# Start MariaDB first
-echo "Starting MariaDB..."
-/usr/local/bin/start_mariadb.sh
+# --- CONFIG VALIDATION & ENV SETUP ---
 
-# Get MariaDB PID
-MYSQL_PID=$(pgrep -f "mysqld.*port=3321")
-echo "MariaDB started with PID: $MYSQL_PID"
+if [ ! -f "/app/config/config.json" ]; then
+  echo "==============================================="
+  echo "ERROR: Configuration file not found!"
+  echo "==============================================="
+  echo "Please run setup.sh or provide config/config.json."
+  echo "==============================================="
+  exit 1
+fi
 
-# Start Node.js server in the background
+YOUTUBE_OUTPUT_DIR=$(jq -r '.youtubeOutputDirectory' /app/config/config.json)
+
+if [ -z "$YOUTUBE_OUTPUT_DIR" ] || [ "$YOUTUBE_OUTPUT_DIR" == "null" ]; then
+  echo "==============================================="
+  echo "ERROR: YouTube output directory not configured!"
+  echo "==============================================="
+  exit 1
+fi
+
+if [ ! -d "$YOUTUBE_OUTPUT_DIR" ]; then
+  echo "==============================================="
+  echo "ERROR: YouTube output directory does not exist!"
+  echo "Directory: $YOUTUBE_OUTPUT_DIR"
+  echo "==============================================="
+  exit 1
+fi
+
+if [ ! -r "$YOUTUBE_OUTPUT_DIR" ]; then
+  echo "==============================================="
+  echo "ERROR: YouTube output directory is not readable!"
+  echo "Directory: $YOUTUBE_OUTPUT_DIR"
+  echo "==============================================="
+  exit 1
+fi
+
+echo "YouTube output directory verified: $YOUTUBE_OUTPUT_DIR"
+export YOUTUBE_OUTPUT_DIR
+
+export LOG_LEVEL=${LOG_LEVEL:-warn}
+export AUTH_ENABLED=${AUTH_ENABLED:-true}
+
+# Load DB credentials from env or external file if present
+if [ -f "/app/config/external-db.env" ]; then
+  set -a
+  source /app/config/external-db.env
+  set +a
+fi
+
+# --- START MARIADB IF NEEDED ---
+if [ "$START_MARIADB" = "true" ]; then
+  echo "Starting MariaDB..."
+  /usr/local/bin/start_mariadb.sh
+  MYSQL_PID=$(pgrep -f "mysqld.*port=3321")
+  echo "MariaDB started with PID: $MYSQL_PID"
+fi
+
+# --- WAIT FOR DATABASE ---
+echo "Waiting for database to be ready..."
+MAX_TRIES=30
+TRIES=0
+while [ $TRIES -lt $MAX_TRIES ]; do
+    if node -e "
+        const mysql = require('mysql2/promise');
+        mysql.createConnection({
+            host: process.env.DB_HOST || 'localhost',
+            port: process.env.DB_PORT || 3321,
+            user: process.env.DB_USER || 'root',
+            password: process.env.DB_PASSWORD || '123qweasd',
+            database: process.env.DB_NAME || 'youtarr'
+        }).then(() => {
+            console.log('Database connection successful');
+            process.exit(0);
+        }).catch((err) => {
+            process.exit(1);
+        });
+    " 2>/dev/null; then
+        echo "Database is ready!"
+        break
+    fi
+    TRIES=$((TRIES + 1))
+    if [ $TRIES -eq $MAX_TRIES ]; then
+        echo "Failed to connect to database after $MAX_TRIES attempts"
+        exit 1
+    fi
+    echo "Waiting for database... (attempt $TRIES/$MAX_TRIES)"
+    sleep 2
+done
+
+# --- START NODE SERVER ---
 echo "Starting Node.js server..."
 node /app/server/server.js &
 NODE_PID=$!
