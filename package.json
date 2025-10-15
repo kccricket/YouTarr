@@ -9,22 +9,22 @@
     "client": "cd client && npm start",
     "start:db": "bash ./scripts/start-dev-dbonly.sh",
     "dev": "concurrently --kill-others \"npm run start:dev\" \"npm run client\"",
-    "lint": "eslint ./client/src/. --ext .ts,.tsx && eslint ./server/. --ext .js",
-    "lint:frontend": "eslint ./client/src/. --ext .ts,.tsx",
-    "lint:backend": "eslint ./server/. --ext .js",
+    "lint": "npx eslint ./client/src/. --ext .ts,.tsx && npx eslint ./server/. --ext .js",
+    "lint:frontend": "npx eslint ./client/src/. --ext .ts,.tsx",
+    "lint:backend": "npx eslint ./server/. --ext .js",
     "lint:ts": "cd client && npx tsc --noEmit",
-    "lint:fix": "eslint ./client/src/. --ext .ts,.tsx --fix && eslint ./server/. --ext .js --fix",
-    "lint-staged": "lint-staged",
-    "prepare": "husky install",
+    "lint:fix": "npx eslint ./client/src/. --ext .ts,.tsx --fix && npx eslint ./server/. --ext .js --fix",
+    "lint-staged": "npx lint-staged",
+    "prepare": "npx husky install",
     "test": "npm run test:backend && npm run test:frontend",
-    "test:backend": "jest --config jest.config.js",
+    "test:backend": "npx jest --config jest.config.js",
     "test:frontend": "cd client && npm test -- --watchAll=false",
-    "test:coverage": "jest --config jest.config.js --coverage && cd client && npm test -- --coverage --watchAll=false",
-    "test:watch": "jest --config jest.config.js --watch"
+    "test:coverage": "npx jest --config jest.config.js --coverage && cd client && npm test -- --coverage --watchAll=false",
+    "test:watch": "npx jest --config jest.config.js --watch"
   },
   "lint-staged": {
     "./client/src/*.{ts,tsx},./server/*.js": [
-      "eslint --fix",
+      "npx eslint --fix",
       "git add"
     ]
   },
