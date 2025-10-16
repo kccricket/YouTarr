@@ -218,13 +218,30 @@ class ConfigModule extends EventEmitter {
     // Apply migrations after loading and initializing defaults
     this.config = this.migrateConfig(this.config);
 
-    this.watchConfig();
+    // Start config file watcher in normal runs, but avoid starting it during tests
+    // or when explicitly disabled by DISABLE_CONFIG_WATCH. Tests can call
+    // configModule.watchConfig() directly if they need watch behavior.
+    if (process.env.NODE_ENV !== 'test' && !process.env.DISABLE_CONFIG_WATCH) {
+      this.watchConfig();
+    }
   }
 
   applyEnvironmentOverrides() {
     // Apply environment variable overrides to config
     // These take precedence over config file values
     let configModified = false;
+
+    // Helper to permissively parse boolean-like strings from env vars
+    // Accepts: 'true', 'yes', '1', 'on' => true
+    //          'false', 'no', '0', 'off' => false
+    // Returns: true/false for recognized values, or null for unrecognized
+    const parseBooleanEnv = (raw) => {
+      if (raw === undefined || raw === null) return null;
+      const value = String(raw).trim().toLowerCase();
+      if (['true', 'yes', '1', 'on'].includes(value)) return true;
+      if (['false', 'no', '0', 'off'].includes(value)) return false;
+      return null;
+    };
 
     // Helper function to apply an environment variable override
     const applyOverride = (envVar, configKey, type = 'string') => {
@@ -234,9 +251,15 @@ class ConfigModule extends EventEmitter {
         // Convert value based on type
         let convertedValue;
         switch (type) {
-        case 'boolean':
-          convertedValue = value.toLowerCase() === 'true';
+        case 'boolean': {
+          const parsed = parseBooleanEnv(value);
+          if (parsed === null) {
+            logger.warn(`Invalid boolean value for ${envVar}: ${value}. Expected one of true/yes/1/on or false/no/0/off (case-insensitive), skipping override`);
+            return false;
+          }
+          convertedValue = parsed;
           break;
+        }
         case 'number':
           convertedValue = parseInt(value, 10);
           if (isNaN(convertedValue)) {
