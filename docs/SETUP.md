@@ -19,25 +19,52 @@ Before setting up Youtarr, ensure you have:
    cd Youtarr
    ```
 
-2. **Run the setup script**:
+2. **Start Youtarr** (setup script is now optional):
+   
+   **Option A: Quick Start with Defaults**
    ```bash
-   ./setup.sh
+   docker compose up -d
    ```
-   This will prompt you to select the root directory where YouTube videos will be stored.
-
-3. **Start Youtarr**:
+   Videos will be saved to `./youtube-downloads` directory by default.
+   
+   **Option B: Custom Configuration via Environment Variables**
    ```bash
-   ./start.sh
+   export YOUTUBE_OUTPUT_DIR=/path/to/your/downloads
+   docker compose up -d
    ```
-   This starts both the Youtarr application and MariaDB database containers.
+   
+   **Option C: Interactive Setup Script (Legacy)**
+   ```bash
+   ./setup.sh  # Select your YouTube directory
+   ./start.sh  # Start containers
+   ```
 
-4. **Access the web interface**:
+3. **Access the web interface**:
    Open your browser and navigate to `http://localhost:3087`
 
-5. **Complete initial setup**:
+4. **Complete initial setup**:
    - On first access from localhost, you'll be prompted to create an admin account
    - Choose a strong password (minimum 8 characters recommended)
    - This account will be used for all future logins
+
+### Configuration Methods
+
+Youtarr supports three configuration methods (in order of precedence):
+
+1. **Environment Variables** (highest priority)
+   - Set before starting containers
+   - Override config file values on each startup
+   - See [DOCKER.md](DOCKER.md) for complete list
+
+2. **Config File** (`config/config.json`)
+   - Auto-generated from `config.example.json` if missing
+   - Can be edited manually or via the web UI
+   - Persists between container restarts
+
+3. **Web UI Configuration**
+   - Access settings after login
+   - Changes saved to config file
+   - Requires container restart for some settings
 
 ## Authentication
 

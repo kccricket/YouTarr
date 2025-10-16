@@ -14,6 +14,9 @@ class ConfigModule extends EventEmitter {
 
     this.config = JSON.parse(fs.readFileSync(this.configPath));
 
+    // Apply environment variable overrides BEFORE any other processing
+    this.applyEnvironmentOverrides();
+
     if (this.isPlatformDeployment()) {
       this.ensurePlatformDirectories();
     }
@@ -215,7 +218,123 @@ class ConfigModule extends EventEmitter {
     // Apply migrations after loading and initializing defaults
     this.config = this.migrateConfig(this.config);
 
-    this.watchConfig();
+    // Start config file watcher in normal runs, but avoid starting it during tests
+    // or when explicitly disabled by DISABLE_CONFIG_WATCH. Tests can call
+    // configModule.watchConfig() directly if they need watch behavior.
+    if (process.env.NODE_ENV !== 'test' && !process.env.DISABLE_CONFIG_WATCH) {
+      this.watchConfig();
+    }
+  }
+
+  applyEnvironmentOverrides() {
+    // Apply environment variable overrides to config
+    // These take precedence over config file values
+    let configModified = false;
+
+    // Helper to permissively parse boolean-like strings from env vars
+    // Accepts: 'true', 'yes', '1', 'on' => true
+    //          'false', 'no', '0', 'off' => false
+    // Returns: true/false for recognized values, or null for unrecognized
+    const parseBooleanEnv = (raw) => {
+      if (raw === undefined || raw === null) return null;
+      const value = String(raw).trim().toLowerCase();
+      if (['true', 'yes', '1', 'on'].includes(value)) return true;
+      if (['false', 'no', '0', 'off'].includes(value)) return false;
+      return null;
+    };
+
+    // Helper function to apply an environment variable override
+    const applyOverride = (envVar, configKey, type = 'string') => {
+      if (process.env[envVar] !== undefined && process.env[envVar] !== '') {
+        const value = process.env[envVar];
+        
+        // Convert value based on type
+        let convertedValue;
+        switch (type) {
+        case 'boolean': {
+          const parsed = parseBooleanEnv(value);
+          if (parsed === null) {
+            logger.warn(`Invalid boolean value for ${envVar}: ${value}. Expected one of true/yes/1/on or false/no/0/off (case-insensitive), skipping override`);
+            return false;
+          }
+          convertedValue = parsed;
+          break;
+        }
+        case 'number':
+          convertedValue = parseInt(value, 10);
+          if (isNaN(convertedValue)) {
+            logger.warn(`Invalid number value for ${envVar}: ${value}, skipping override`);
+            return false;
+          }
+          break;
+        case 'string':
+        default:
+          convertedValue = value;
+          break;
+        }
+
+        // Only update if value is different
+        if (this.config[configKey] !== convertedValue) {
+          logger.info(`Applying environment override: ${envVar} -> ${configKey}`);
+          this.config[configKey] = convertedValue;
+          configModified = true;
+        }
+        return true;
+      }
+      return false;
+    };
+
+    // List of environment variable overrides
+    const overrides = [
+      // Core settings
+      { envVar: 'YOUTUBE_OUTPUT_DIR', key: 'youtubeOutputDirectory', type: 'string' },
+
+      // Plex integration settings
+      { envVar: 'PLEX_IP', key: 'plexIP', type: 'string' },
+      { envVar: 'PLEX_PORT', key: 'plexPort', type: 'string' },
+      { envVar: 'PLEX_API_KEY', key: 'plexApiKey', type: 'string' },
+      { envVar: 'PLEX_LIBRARY_ID', key: 'plexYoutubeLibraryId', type: 'string' },
+
+      // Channel settings
+      { envVar: 'CHANNEL_AUTO_DOWNLOAD', key: 'channelAutoDownload', type: 'boolean' },
+      { envVar: 'CHANNEL_FILES_TO_DOWNLOAD', key: 'channelFilesToDownload', type: 'number' },
+      { envVar: 'CHANNEL_DOWNLOAD_FREQUENCY', key: 'channelDownloadFrequency', type: 'string' },
+
+      // Video quality settings
+      { envVar: 'PREFERRED_RESOLUTION', key: 'preferredResolution', type: 'string' },
+      { envVar: 'VIDEO_CODEC', key: 'videoCodec', type: 'string' },
+
+      // Notification settings
+      { envVar: 'NOTIFICATIONS_ENABLED', key: 'notificationsEnabled', type: 'boolean' },
+      { envVar: 'NOTIFICATION_SERVICE', key: 'notificationService', type: 'string' },
+      { envVar: 'DISCORD_WEBHOOK_URL', key: 'discordWebhookUrl', type: 'string' },
+
+      // Download performance settings
+      { envVar: 'DOWNLOAD_SOCKET_TIMEOUT', key: 'downloadSocketTimeoutSeconds', type: 'number' },
+      { envVar: 'DOWNLOAD_THROTTLED_RATE', key: 'downloadThrottledRate', type: 'string' },
+      { envVar: 'DOWNLOAD_RETRY_COUNT', key: 'downloadRetryCount', type: 'number' },
+      { envVar: 'ENABLE_STALL_DETECTION', key: 'enableStallDetection', type: 'boolean' },
+      { envVar: 'STALL_DETECTION_WINDOW', key: 'stallDetectionWindowSeconds', type: 'number' },
+      { envVar: 'STALL_DETECTION_THRESHOLD', key: 'stallDetectionRateThreshold', type: 'string' },
+
+      // Media server features
+      { envVar: 'WRITE_CHANNEL_POSTERS', key: 'writeChannelPosters', type: 'boolean' },
+      { envVar: 'WRITE_VIDEO_NFO_FILES', key: 'writeVideoNfoFiles', type: 'boolean' },
+
+      // Temporary download settings
+      { envVar: 'USE_TMP_FOR_DOWNLOADS', key: 'useTmpForDownloads', type: 'boolean' },
+      { envVar: 'TMP_FILE_PATH', key: 'tmpFilePath', type: 'string' },
+    ];
+
+    // Apply all overrides
+    overrides.forEach(({ envVar, key, type }) => {
+      applyOverride(envVar, key, type);
+    });
+    // Save config if any environment overrides were applied
+    if (configModified) {
+      logger.info('Saving config with environment variable overrides');
+      fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
+    }
   }
 
   ensureConfigExists() {

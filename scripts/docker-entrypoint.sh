@@ -44,42 +44,19 @@ handle_shutdown() {
 
 # --- CONFIG VALIDATION & ENV SETUP ---
 
-if [ ! -f "/app/config/config.json" ]; then
-  echo "==============================================="
-  echo "ERROR: Configuration file not found!"
-  echo "==============================================="
-  echo "Please run setup.sh or provide config/config.json."
-  echo "==============================================="
-  exit 1
-fi
+# Note: Config creation is handled by the Node.js application (configModule.js)
+# The app will auto-create config.json from config.example.json if missing
+# and will apply environment variable overrides
 
-YOUTUBE_OUTPUT_DIR=$(jq -r '.youtubeOutputDirectory' /app/config/config.json)
+# Just validate that the download directory will be accessible
+# The actual directory path is set by the Node.js app based on:
+# - YOUTUBE_OUTPUT_DIR env var (if set)
+# - DATA_PATH env var (for platform deployments)
+# - config.json value (if exists)
+# - Default: /usr/src/app/data (for Docker)
 
-if [ -z "$YOUTUBE_OUTPUT_DIR" ] || [ "$YOUTUBE_OUTPUT_DIR" == "null" ]; then
-  echo "==============================================="
-  echo "ERROR: YouTube output directory not configured!"
-  echo "==============================================="
-  exit 1
-fi
-
-if [ ! -d "$YOUTUBE_OUTPUT_DIR" ]; then
-  echo "==============================================="
-  echo "ERROR: YouTube output directory does not exist!"
-  echo "Directory: $YOUTUBE_OUTPUT_DIR"
-  echo "==============================================="
-  exit 1
-fi
-
-if [ ! -r "$YOUTUBE_OUTPUT_DIR" ]; then
-  echo "==============================================="
-  echo "ERROR: YouTube output directory is not readable!"
-  echo "Directory: $YOUTUBE_OUTPUT_DIR"
-  echo "==============================================="
-  exit 1
-fi
-
-echo "YouTube output directory verified: $YOUTUBE_OUTPUT_DIR"
-export YOUTUBE_OUTPUT_DIR
+YOUTUBE_OUTPUT_DIR="${YOUTUBE_OUTPUT_DIR:-/usr/src/app/data}"
+echo "Download directory will be: $YOUTUBE_OUTPUT_DIR"
 
 export LOG_LEVEL=${LOG_LEVEL:-warn}
 export AUTH_ENABLED=${AUTH_ENABLED:-true}
