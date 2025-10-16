@@ -261,45 +261,52 @@ class ConfigModule extends EventEmitter {
       return false;
     };
 
-    // Core settings
-    applyOverride('YOUTUBE_OUTPUT_DIR', 'youtubeOutputDirectory', 'string');
-    
-    // Plex integration settings
-    applyOverride('PLEX_IP', 'plexIP', 'string');
-    applyOverride('PLEX_PORT', 'plexPort', 'string');
-    applyOverride('PLEX_API_KEY', 'plexApiKey', 'string');
-    applyOverride('PLEX_LIBRARY_ID', 'plexYoutubeLibraryId', 'string');
-    
-    // Channel settings
-    applyOverride('CHANNEL_AUTO_DOWNLOAD', 'channelAutoDownload', 'boolean');
-    applyOverride('CHANNEL_FILES_TO_DOWNLOAD', 'channelFilesToDownload', 'number');
-    applyOverride('CHANNEL_DOWNLOAD_FREQUENCY', 'channelDownloadFrequency', 'string');
-    
-    // Video quality settings
-    applyOverride('PREFERRED_RESOLUTION', 'preferredResolution', 'string');
-    applyOverride('VIDEO_CODEC', 'videoCodec', 'string');
-    
-    // Notification settings
-    applyOverride('NOTIFICATIONS_ENABLED', 'notificationsEnabled', 'boolean');
-    applyOverride('NOTIFICATION_SERVICE', 'notificationService', 'string');
-    applyOverride('DISCORD_WEBHOOK_URL', 'discordWebhookUrl', 'string');
-    
-    // Download performance settings
-    applyOverride('DOWNLOAD_SOCKET_TIMEOUT', 'downloadSocketTimeoutSeconds', 'number');
-    applyOverride('DOWNLOAD_THROTTLED_RATE', 'downloadThrottledRate', 'string');
-    applyOverride('DOWNLOAD_RETRY_COUNT', 'downloadRetryCount', 'number');
-    applyOverride('ENABLE_STALL_DETECTION', 'enableStallDetection', 'boolean');
-    applyOverride('STALL_DETECTION_WINDOW', 'stallDetectionWindowSeconds', 'number');
-    applyOverride('STALL_DETECTION_THRESHOLD', 'stallDetectionRateThreshold', 'string');
-    
-    // Media server features
-    applyOverride('WRITE_CHANNEL_POSTERS', 'writeChannelPosters', 'boolean');
-    applyOverride('WRITE_VIDEO_NFO_FILES', 'writeVideoNfoFiles', 'boolean');
-    
-    // Temporary download settings
-    applyOverride('USE_TMP_FOR_DOWNLOADS', 'useTmpForDownloads', 'boolean');
-    applyOverride('TMP_FILE_PATH', 'tmpFilePath', 'string');
+    // List of environment variable overrides
+    const overrides = [
+      // Core settings
+      { envVar: 'YOUTUBE_OUTPUT_DIR', key: 'youtubeOutputDirectory', type: 'string' },
 
+      // Plex integration settings
+      { envVar: 'PLEX_IP', key: 'plexIP', type: 'string' },
+      { envVar: 'PLEX_PORT', key: 'plexPort', type: 'string' },
+      { envVar: 'PLEX_API_KEY', key: 'plexApiKey', type: 'string' },
+      { envVar: 'PLEX_LIBRARY_ID', key: 'plexYoutubeLibraryId', type: 'string' },
+
+      // Channel settings
+      { envVar: 'CHANNEL_AUTO_DOWNLOAD', key: 'channelAutoDownload', type: 'boolean' },
+      { envVar: 'CHANNEL_FILES_TO_DOWNLOAD', key: 'channelFilesToDownload', type: 'number' },
+      { envVar: 'CHANNEL_DOWNLOAD_FREQUENCY', key: 'channelDownloadFrequency', type: 'string' },
+
+      // Video quality settings
+      { envVar: 'PREFERRED_RESOLUTION', key: 'preferredResolution', type: 'string' },
+      { envVar: 'VIDEO_CODEC', key: 'videoCodec', type: 'string' },
+
+      // Notification settings
+      { envVar: 'NOTIFICATIONS_ENABLED', key: 'notificationsEnabled', type: 'boolean' },
+      { envVar: 'NOTIFICATION_SERVICE', key: 'notificationService', type: 'string' },
+      { envVar: 'DISCORD_WEBHOOK_URL', key: 'discordWebhookUrl', type: 'string' },
+
+      // Download performance settings
+      { envVar: 'DOWNLOAD_SOCKET_TIMEOUT', key: 'downloadSocketTimeoutSeconds', type: 'number' },
+      { envVar: 'DOWNLOAD_THROTTLED_RATE', key: 'downloadThrottledRate', type: 'string' },
+      { envVar: 'DOWNLOAD_RETRY_COUNT', key: 'downloadRetryCount', type: 'number' },
+      { envVar: 'ENABLE_STALL_DETECTION', key: 'enableStallDetection', type: 'boolean' },
+      { envVar: 'STALL_DETECTION_WINDOW', key: 'stallDetectionWindowSeconds', type: 'number' },
+      { envVar: 'STALL_DETECTION_THRESHOLD', key: 'stallDetectionRateThreshold', type: 'string' },
+
+      // Media server features
+      { envVar: 'WRITE_CHANNEL_POSTERS', key: 'writeChannelPosters', type: 'boolean' },
+      { envVar: 'WRITE_VIDEO_NFO_FILES', key: 'writeVideoNfoFiles', type: 'boolean' },
+
+      // Temporary download settings
+      { envVar: 'USE_TMP_FOR_DOWNLOADS', key: 'useTmpForDownloads', type: 'boolean' },
+      { envVar: 'TMP_FILE_PATH', key: 'tmpFilePath', type: 'string' },
+    ];
+
+    // Apply all overrides
+    overrides.forEach(({ envVar, key, type }) => {
+      applyOverride(envVar, key, type);
+    });
     // Save config if any environment overrides were applied
     if (configModified) {
       logger.info('Saving config with environment variable overrides');
